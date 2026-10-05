@@ -133,6 +133,26 @@ func TestExtensionRejectsUnsafePathsAndInvalidPackage(t *testing.T) {
 	}
 }
 
+func TestExtensionRepositoryNameDoesNotSelectExistingDirectory(t *testing.T) {
+	t.Setenv("OSCM_EXTENSION_DIR", filepath.Join(t.TempDir(), "extensions"))
+	dir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dir, "owner", "oscm-fixture"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	noCommands := func(context.Context, string, string, ...string) ([]byte, error) {
+		t.Fatal("install plan executed a command")
+		return nil, nil
+	}
+	out, err := invoke(t, noCommands, "-C", dir, "extension", "install", "owner/oscm-fixture", "--pin", "v1")
+	if err != nil || !strings.Contains(out, "https://github.com/owner/oscm-fixture.git") || !strings.Contains(out, `"local": false`) {
+		t.Fatalf("remote repository shadowed by local directory: %s %v", out, err)
+	}
+	out, err = invoke(t, noCommands, "-C", dir, "extension", "install", "./owner/oscm-fixture")
+	if err != nil || !strings.Contains(out, `"local": true`) {
+		t.Fatalf("explicit local selection: %s %v", out, err)
+	}
+}
+
 func TestExtensionRemotePinAndFastForwardUpgrade(t *testing.T) {
 	extensionFixture(t, "neovim")
 	repo := newGitRepo(t)

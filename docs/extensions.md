@@ -2,7 +2,9 @@
 
 The core CLI never requires or loads extensions. Management commands do not
 resolve OCI profiles, contexts or repositories. Extension sources may be
-`OWNER/REPO` on GitHub, an HTTPS Git repository URL, or an existing local directory.
+`OWNER/REPO` on GitHub, an HTTPS Git repository URL, or an explicit local directory (`.`, `./path`, `../path`, or an absolute path).
+`OWNER/REPO` always selects the remote repository, even when that relative
+directory exists locally.
 Private remote repositories use your existing Git authentication.
 
 ## Command extensions
