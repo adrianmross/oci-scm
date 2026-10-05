@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- gh-style optional extension install/list/upgrade/remove/exec commands, with
+  pinned remote Git packages, local development links and Neovim runtime paths.
+- Keep review-mode integration opt-in; exclude the adapter from CLI archives.
+
 ## 0.1.0 — 2026-10-05
 
 - Initial gh-style OCI repository, PR, comment, build run and pipeline commands.

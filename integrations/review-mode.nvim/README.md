@@ -1,13 +1,26 @@
 # OCI provider for review-mode.nvim
 
-This external Neovim plugin is shipped by oci-scm. It requires review-mode's SCM
+This optional external Neovim plugin is installed separately from oci-scm. The CLI
+works without Neovim or this adapter. It requires review-mode's SCM
 provider interface, Neovim 0.11+, the `oscm` executable, and configured OCI CLI
 authentication. It has no Lua dependencies beyond Neovim.
 
-Add this directory to Neovim's runtimepath before starting ReviewMode:
+Install the adapter explicitly:
+
+```sh
+oscm extension install adrianmross/oci-scm --name review-mode \
+  --subdir integrations/review-mode.nvim --apply
+oscm extension path review-mode
+```
+
+Install review-mode.nvim separately. Add the returned directory to Neovim's
+runtimepath before starting ReviewMode; installing the extension never enables it:
 
 ```lua
-vim.opt.runtimepath:append(vim.fn.expand("~/dev/oci-scm/integrations/review-mode.nvim"))
+local path = vim.fn.system({ "oscm", "extension", "path", "review-mode" })
+if vim.v.shell_error == 0 then
+  vim.opt.runtimepath:append(vim.trim(path))
+end
 
 require("review_mode").setup({
   scm = {
@@ -25,22 +38,24 @@ require("review_mode").setup({
 })
 ```
 
-For lazy.nvim, load the repository as a dependency and append the subdirectory:
+For lazy.nvim, use the extension installed by oscm:
 
 ```lua
 {
   "adrianmross/review-mode.nvim",
-  dependencies = {
-    {
-      "adrianmross/oci-scm",
-      config = function(plugin)
-        vim.opt.runtimepath:append(plugin.dir .. "/integrations/review-mode.nvim")
-      end,
-    },
-  },
+  init = function()
+    local path = vim.fn.system({ "oscm", "extension", "path", "review-mode" })
+    if vim.v.shell_error == 0 then
+      vim.opt.runtimepath:append(vim.trim(path))
+    end
+  end,
   opts = { scm = { provider = "oci" } }, -- use project settings above for mixed SCMs
 }
 ```
+
+The previous lazy.nvim repository dependency with an explicit subdirectory
+runtimepath remains supported as an alternative to oscm extension management.
+No migration is required for existing installations.
 
 Install the CLI separately using oci-scm's install instructions. Plugin loading
 does not install an executable. You can set `scm.command` to an absolute binary
