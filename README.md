@@ -1,9 +1,5 @@
 # oci-scm · oscm
 
-An external [OCI provider for review-mode.nvim](integrations/review-mode.nvim)
-connects SCM comments/replies to Neovim's review UI. Provider selection and OCI
-context arguments can be configured per project.
-
 OCI DevOps source control from the terminal, with the command vocabulary of
 [GitHub CLI](https://cli.github.com/manual/gh). `oscm` and `oci-scm` are the same
 program. Standalone Go CLI, MIT licensed; no GitHub account or daemon required.
@@ -26,7 +22,9 @@ oscm version
 
 Go 1.25.6 or newer is needed to build. Tagged releases produce both executable
 names for macOS, Linux and Windows, amd64 and arm64, with archive checksums.
-No stable release or Homebrew formula is published yet.
+Stable releases are available on [GitHub](https://github.com/adrianmross/oci-scm/releases).
+Install the CLI with `brew install adrianmross/tap/oci-scm`.
+Neovim and review-mode are not CLI dependencies; editor integration is opt-in.
 
 ## Choose your context
 
@@ -121,6 +119,41 @@ Merge requires an explicit strategy and `--apply`. Source branches are retained
 unless `--delete-branch` is explicitly supplied. Async operations report submission
 and a readback, not assumed completion. `pr checks` reads OCI snapshots; it does
 not run checks or claim missing CI is passing.
+
+## Optional extensions
+
+`oscm` works without any extensions. Install command extensions or editor plugins
+separately with gh-style commands; no OCI authentication is needed to manage them.
+
+```sh
+oscm extension install OWNER/oscm-example --pin v1.0.0 --apply
+oscm extension list --json all
+oscm extension exec example -- --help
+oscm extension upgrade example --apply
+oscm extension remove example --apply
+```
+
+Install, upgrade and remove show a plan without `--apply`. Explicit `exec` runs
+the installed command with your arguments, stdin/stdout/stderr and exit status.
+Installation never runs an extension or its install scripts. Local directories
+are linked by reference for development; removal keeps the source files.
+Pinned and local extensions are not upgraded; unpinned remote extensions upgrade
+with a clean-checkout, fast-forward Git pull. See [extension format](docs/extensions.md).
+
+The [OCI adapter for review-mode.nvim](integrations/review-mode.nvim) is an
+optional Neovim extension. Install it only if you want that editor integration:
+
+```sh
+oscm extension install adrianmross/oci-scm \
+  --name review-mode --subdir integrations/review-mode.nvim --apply
+oscm extension path review-mode
+```
+
+Add the returned path to Neovim's runtimepath and install review-mode.nvim
+separately. Installing this extension does not install Neovim, install the review
+UI, enable it, or change your editor configuration. Provider selection and OCI
+context arguments remain configurable per project. CLI release archives exclude
+the adapter; Git installs select it explicitly using `--subdir`.
 
 ## Cross-machine handoffs
 

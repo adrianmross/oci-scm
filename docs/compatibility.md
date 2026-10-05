@@ -24,6 +24,7 @@ This table is the current implementation boundary, not a claim of full parity.
 | browse | Opens a supplied HTTPS console/SCM URL; no guessed console URL routes |
 | api | OCI-signed regional DevOps JSON API requests |
 | completion/version | Bash, Zsh, Fish, PowerShell completion; both executable names |
+| extension install/list/upgrade/remove/exec | Opt-in Git/local packages; optional Neovim plugins; explicit execution; [differences](extensions.md) |
 | handoff | Additional cross-machine bundle/checksum/commit/reply/evidence workflow |
 | context/doctor | Optional octx and oidm integration with effective-target inspection |
 

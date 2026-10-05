@@ -1,0 +1,4 @@
+{
+  "schema": "oci-scm.extension.v1",
+  "kind": "neovim"
+}

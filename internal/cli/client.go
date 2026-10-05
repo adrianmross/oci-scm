@@ -85,7 +85,7 @@ func newApp(run runner) *app {
 	f.StringVar(&a.fields, "json", "", "JSON fields (comma-separated), or all")
 	f.BoolVar(&a.apply, "apply", false, "Execute mutations; otherwise print a plan")
 	f.DurationVar(&a.timeout, "timeout", 2*time.Minute, "Timeout per external command")
-	r.AddCommand(a.contextCommand(), a.authCommands(), a.repoCommands(), a.prCommands(), a.runCommands(), a.handoffCommands(), a.apiCommand(), a.workflowCommands(), a.browseCommand())
+	r.AddCommand(a.contextCommand(), a.authCommands(), a.repoCommands(), a.prCommands(), a.runCommands(), a.handoffCommands(), a.apiCommand(), a.workflowCommands(), a.browseCommand(), a.extensionCommands())
 	r.AddCommand(&cobra.Command{Use: "version", Args: cobra.NoArgs, Short: "Show version", RunE: func(c *cobra.Command, _ []string) error { return a.print(c, map[string]any{"version": version}) }})
 	r.AddCommand(&cobra.Command{Use: "doctor", Args: cobra.NoArgs, Short: "Verify tooling, effective target, and repository access", RunE: a.doctor})
 	return a
