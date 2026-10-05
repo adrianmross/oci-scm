@@ -1,7 +1,7 @@
 # OCI provider for review-mode.nvim
 
 This external Neovim plugin is shipped by oci-scm. It requires review-mode's SCM
-provider interface, Neovim 0.10+, the `oscm` executable, and configured OCI CLI
+provider interface, Neovim 0.11+, the `oscm` executable, and configured OCI CLI
 authentication. It has no Lua dependencies beyond Neovim.
 
 Add this directory to Neovim's runtimepath before starting ReviewMode:
