@@ -115,7 +115,7 @@ func (f *fakeOCI) run(_ context.Context, _ string, bin string, args ...string) (
 		}
 		f.mutations++
 		if strings.Contains(joined, "create-pull-request-comment") {
-			f.comments = append(f.comments, map[string]any{"id": "reply", "parent-id": f.payload["parentId"], "data": f.payload["data"], "lifecycle-state": "ACTIVE"})
+			f.comments = append(f.comments, map[string]any{"id": "reply", "parent-id": f.payload["parentId"], "data": f.payload["data"], "lifecycle-state": "ACTIVE", "file-path": f.payload["filePath"], "commit-id": f.payload["commitId"], "file-type": f.payload["fileType"], "line-number": f.payload["lineNumber"]})
 			return jsonBytes(map[string]any{"data": f.comments[len(f.comments)-1]}), nil
 		}
 		return []byte(`{"data":{}}`), nil

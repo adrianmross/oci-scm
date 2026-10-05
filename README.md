@@ -1,5 +1,9 @@
 # oci-scm · oscm
 
+An external [OCI provider for review-mode.nvim](integrations/review-mode.nvim)
+connects SCM comments/replies to Neovim's review UI. Provider selection and OCI
+context arguments can be configured per project.
+
 OCI DevOps source control from the terminal, with the command vocabulary of
 [GitHub CLI](https://cli.github.com/manual/gh). `oscm` and `oci-scm` are the same
 program. Standalone Go CLI, MIT licensed; no GitHub account or daemon required.

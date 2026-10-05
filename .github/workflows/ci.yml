@@ -6,6 +6,16 @@ on:
 permissions:
   contents: read
 jobs:
+  review-provider:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+      - name: Install Neovim
+        run: sudo apt-get update && sudo apt-get install -y neovim
+      - name: Check external OCI provider
+        env:
+          OSCM_PLUGIN_ROOT: ${{ github.workspace }}/integrations/review-mode.nvim
+        run: nvim --headless -u NONE -i NONE -c "luafile integrations/review-mode.nvim/scripts/check.lua"
   test:
     strategy:
       fail-fast: false
