@@ -13,7 +13,7 @@ This table is the current implementation boundary, not a claim of full parity.
 | pr list/view/status | OCID, PR URL, branch, or current upstream; filtered lists |
 | pr create/edit | Title/body/base/reviewer principal IDs; structured payloads |
 | pr diff | OCI file-diff JSON, not a unified Git patch |
-| pr checkout | WorkTrunk; preserves the current checkout; same-repo only |
+| pr checkout | WorkTrunk; preserves current checkout; forks require an explicit verified `--remote` |
 | pr comment | Idempotent comments or threaded replies with `--parent` |
 | pr comments | Read every thread; `comments edit/delete PR COMMENT_ID` manage existing comments |
 | pr checks | OCI build snapshots; no watch/fail-status exit code yet |
@@ -27,7 +27,7 @@ This table is the current implementation boundary, not a claim of full parity.
 | handoff | Additional cross-machine bundle/checksum/commit/reply/evidence workflow |
 | context/doctor | Optional octx and oidm integration with effective-target inspection |
 
-Remaining OCI equivalents: fork-aware checkout, checks watching, and build log
+Remaining OCI equivalents: checks watching and build log
 streaming/download through the relevant logging service. These require explicit
 fork remotes or logging permissions/configuration. `api` is available for
 deliberate API operations meanwhile.

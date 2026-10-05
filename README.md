@@ -83,7 +83,10 @@ oscm pr checkout feature-branch --apply
 PR selectors accept an OCID, HTTPS PR URL ending in an OCID, or an open source
 branch. Omitting a selector uses the current branch's upstream, then its local
 name. OCI OCIDs replace GitHub's PR numbers. A branch resolving to multiple open
-PRs fails; choose an OCID. Fork checkout requires explicit remote setup.
+PRs fails; choose an OCID. Fork checkout requires explicit remote setup and
+`oscm pr checkout PR_OCID --remote fork --apply`; its URL is verified against
+the source repository before fetching. Fork worktree branches include the
+remote name to avoid colliding with same-repository worktrees.
 
 ```sh
 oscm pr create --title "Fix key cleanup" --head feature-branch --base main \

@@ -194,3 +194,24 @@ func TestSeparatePushURLIsValidated(t *testing.T) {
 		t.Fatal("separate wrong push URL accepted")
 	}
 }
+
+func TestForkCheckoutRequiresExplicitRemote(t *testing.T) {
+	cleanEnv(t)
+	run := func(_ context.Context, _ string, bin string, args ...string) ([]byte, error) {
+		if bin == "git" {
+			if strings.Contains(strings.Join(args, " "), "check-ref-format") {
+				return nil, nil
+			}
+			return nil, fmt.Errorf("outside Git")
+		}
+		return []byte(`{"data":{"id":"ocid1.devopspullrequest.test","repository-id":"ocid1.devopsrepository.test","source-repository-id":"fork-repository","source-branch":"feature"}}`), nil
+	}
+	args := append([]string{"pr", "checkout", "ocid1.devopspullrequest.test"}, targetArgs()...)
+	if _, e := invoke(t, run, args...); e == nil {
+		t.Fatal("implicit fork remote accepted")
+	}
+	out, e := invoke(t, run, append(args, "--remote", "fork")...)
+	if e != nil || !strings.Contains(out, "codex/fork/feature") || !strings.Contains(out, "fork-repository") {
+		t.Fatalf("wrong fork checkout plan: %s %v", out, e)
+	}
+}

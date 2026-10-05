@@ -470,17 +470,22 @@ func (a *app) prCommands() *cobra.Command {
 			return e
 		}
 		pr := object(v)
+		cfg.Repository = str(pr, "repository-id")
+		localPrefix := "codex/"
 		if source := str(pr, "source-repository-id"); source != "" && source != str(pr, "repository-id") {
-			return fmt.Errorf("fork checkout requires an explicitly configured fork remote")
+			if a.opts.Remote == "" {
+				return fmt.Errorf("fork checkout requires an explicitly configured fork remote via --remote")
+			}
+			cfg.Repository = source
+			localPrefix += cfg.Remote + "/"
 		}
 		branch := str(pr, "source-branch")
 		if e = validBranch(c, a, branch); e != nil {
 			return e
 		}
 		if !a.apply {
-			return a.print(c, map[string]any{"apply": false, "fetch": []string{cfg.Remote, branch}, "worktrunkBranch": "codex/" + branch})
+			return a.print(c, map[string]any{"apply": false, "fetch": []string{cfg.Remote, branch}, "worktrunkBranch": localPrefix + branch, "sourceRepository": cfg.Repository})
 		}
-		cfg.Repository = str(pr, "repository-id")
 		if e = a.validateRemote(c, cfg); e != nil {
 			return e
 		}
@@ -488,7 +493,7 @@ func (a *app) prCommands() *cobra.Command {
 		if _, e = a.exec(c, "git", "fetch", cfg.Remote, "refs/heads/"+branch+":"+ref); e != nil {
 			return e
 		}
-		local := "codex/" + branch
+		local := localPrefix + branch
 		wtArgs := []string{"switch", local, "--no-cd", "--yes"}
 		if _, e = a.exec(c, "git", "show-ref", "--verify", "refs/heads/"+local); e != nil {
 			wtArgs = append(wtArgs, "--create", "--base", ref)
