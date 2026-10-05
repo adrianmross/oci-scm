@@ -118,6 +118,65 @@ func TestHandoffFailureSavesPartialEvidence(t *testing.T) {
 	}
 }
 
+func TestHandoffPRUpdateRejectsCheckChanges(t *testing.T) {
+	cleanEnv(t)
+	repo := newGitRepo(t)
+	start := commitFile(t, repo, "base", "base")
+	commitFile(t, repo, "fix", "fix")
+	if _, e := execute(context.Background(), repo, "git", "remote", "add", "origin", "git@scm.example.com:team/repo.git"); e != nil {
+		t.Fatal(e)
+	}
+	parent := t.TempDir()
+	checks := filepath.Join(parent, "checks.json")
+	if e := writeJSON(checks, []Check{{Name: "changes tracked file", Argv: []string{"mutate-fixture"}, Evidence: "ordinary"}}); e != nil {
+		t.Fatal(e)
+	}
+	dir := filepath.Join(parent, "handoff")
+	if _, e := invoke(t, execute, append([]string{"handoff", "create", dir, "--since", start, "--source", "feature", "--pr", "ocid1.devopspullrequest.test", "--checks-file", checks, "-C", repo}, targetArgs()...)...); e != nil {
+		t.Fatal(e)
+	}
+	mutations := 0
+	run := func(ctx context.Context, cwd, bin string, args ...string) ([]byte, error) {
+		joined := strings.Join(args, " ")
+		if bin == "mutate-fixture" {
+			return nil, os.WriteFile(filepath.Join(repo, "fix"), []byte("preserved local change"), 0600)
+		}
+		if bin == "git" {
+			if strings.Contains(joined, "ls-remote") {
+				t.Fatal("publication proceeded after checks changed the worktree")
+			}
+			return execute(ctx, cwd, bin, args...)
+		}
+		if joined == "--version" {
+			return []byte("fixture"), nil
+		}
+		if strings.Contains(joined, "--from-json") {
+			mutations++
+			return nil, fmt.Errorf("unexpected mutation")
+		}
+		if strings.Contains(joined, "repository get") {
+			return []byte(`{"data":{"id":"ocid1.devopsrepository.test","ssh-url":"ssh://git@scm.example.com/team/repo.git"}}`), nil
+		}
+		return (&fakeOCI{}).run(ctx, cwd, "oci", args...)
+	}
+	_, e := invoke(t, run, append([]string{"handoff", "apply", dir, "--apply", "--run-checks", "--update-pr", "--oci-bin", "fixture-oci", "-C", repo}, targetArgs()...)...)
+	if e == nil || !strings.Contains(e.Error(), "review before publication") || mutations != 0 {
+		t.Fatalf("unsafe PR update: mutations %d, error %v", mutations, e)
+	}
+	b, e := os.ReadFile(filepath.Join(repo, "fix"))
+	if e != nil || string(b) != "preserved local change" {
+		t.Fatal("check changes were not preserved")
+	}
+	paths, e := filepath.Glob(filepath.Join(dir, "runs", "*", "results.json"))
+	if e != nil || len(paths) != 1 {
+		t.Fatal("partial evidence missing")
+	}
+	b, e = os.ReadFile(paths[0])
+	if e != nil || !strings.Contains(string(b), `"success": false`) {
+		t.Fatal("failed publication was not recorded")
+	}
+}
+
 func TestGitRemoteMustMatchOCIRepository(t *testing.T) {
 	cleanEnv(t)
 	run := func(_ context.Context, _ string, bin string, args ...string) ([]byte, error) {

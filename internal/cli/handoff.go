@@ -621,7 +621,7 @@ func (a *app) applyHandoff(c *cobra.Command, dir string, runChecks, push, update
 			}
 		}
 	}
-	if push {
+	if push || updatePR {
 		current, e := a.exec(c, "git", "rev-parse", "HEAD")
 		if e != nil {
 			return e
@@ -631,8 +631,10 @@ func (a *app) applyHandoff(c *cobra.Command, dir string, runChecks, push, update
 			return e
 		}
 		if strings.TrimSpace(string(current)) != results["localHead"] || len(dirty) > 0 {
-			return fmt.Errorf("checks changed HEAD or left worktree changes; review before pushing")
+			return fmt.Errorf("checks changed HEAD or left worktree changes; review before publication")
 		}
+	}
+	if push {
 		if _, err = a.exec(c, "git", "push", cfg.Remote, "HEAD:refs/heads/"+m.SourceBranch); err != nil {
 			return err
 		}
