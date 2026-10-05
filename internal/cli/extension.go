@@ -127,7 +127,8 @@ func (a *app) extensionCommands() *cobra.Command {
 		if !filepath.IsAbs(localPath) {
 			localPath = filepath.Join(a.dir, localPath)
 		}
-		explicitLocal := filepath.IsAbs(source) || source == "." || source == ".." || strings.HasPrefix(source, "."+string(filepath.Separator)) || strings.HasPrefix(source, ".."+string(filepath.Separator))
+		prefix := strings.ReplaceAll(source, "\\", "/")
+		explicitLocal := filepath.IsAbs(source) || source == "." || source == ".." || strings.HasPrefix(prefix, "./") || strings.HasPrefix(prefix, "../")
 		info, err := os.Stat(localPath)
 		local := explicitLocal && err == nil && info.IsDir()
 		if explicitLocal && !local {
