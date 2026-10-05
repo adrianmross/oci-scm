@@ -127,8 +127,12 @@ func (a *app) extensionCommands() *cobra.Command {
 		if !filepath.IsAbs(localPath) {
 			localPath = filepath.Join(a.dir, localPath)
 		}
+		explicitLocal := filepath.IsAbs(source) || source == "." || source == ".." || strings.HasPrefix(source, "."+string(filepath.Separator)) || strings.HasPrefix(source, ".."+string(filepath.Separator))
 		info, err := os.Stat(localPath)
-		local := err == nil && info.IsDir()
+		local := explicitLocal && err == nil && info.IsDir()
+		if explicitLocal && !local {
+			return fmt.Errorf("local extension directory does not exist or is inaccessible")
+		}
 		if local {
 			source, err = filepath.Abs(localPath)
 			if pin != "" {
