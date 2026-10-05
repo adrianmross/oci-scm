@@ -83,15 +83,32 @@ func (a *app) comments(c *cobra.Command, cfg Config, id string) (map[string]any,
 }
 
 func findReply(list map[string]any, parent, body string) map[string]any {
+	return findComment(list, parent, body, nil)
+}
+
+func findComment(list map[string]any, parent, body string, location map[string]any) map[string]any {
 	for _, item := range items(list) {
 		if str(item, "parent-id") == parent && str(item, "data") == body && str(item, "lifecycle-state") != "DELETED" {
-			return item
+			matches := true
+			for key, value := range location {
+				field := map[string]string{"filePath": "file-path", "commitId": "commit-id", "fileType": "file-type", "lineNumber": "line-number"}[key]
+				if fmt.Sprint(item[field]) != fmt.Sprint(value) {
+					matches = false
+				}
+			}
+			if matches && (parent != "" || location != nil || str(item, "file-path") == "") {
+				return item
+			}
 		}
 	}
 	return nil
 }
 
 func (a *app) reply(c *cobra.Command, cfg Config, id, parent, body string) (map[string]any, error) {
+	return a.postComment(c, cfg, id, parent, body, nil)
+}
+
+func (a *app) postComment(c *cobra.Command, cfg Config, id, parent, body string, location map[string]any) (map[string]any, error) {
 	if strings.TrimSpace(body) == "" {
 		return nil, fmt.Errorf("comment body is required")
 	}
@@ -110,10 +127,13 @@ func (a *app) reply(c *cobra.Command, cfg Config, id, parent, body string) (map[
 			return nil, fmt.Errorf("parent comment %s not found", parent)
 		}
 	}
-	if existing := findReply(before, parent, body); existing != nil {
+	if existing := findComment(before, parent, body, location); existing != nil {
 		return map[string]any{"alreadyPosted": true, "data": existing}, nil
 	}
 	input := map[string]any{"pullRequestId": id, "data": body}
+	for key, value := range location {
+		input[key] = value
+	}
 	if parent != "" {
 		input["parentId"] = parent
 	}
@@ -125,7 +145,7 @@ func (a *app) reply(c *cobra.Command, cfg Config, id, parent, body string) (map[
 	if err != nil {
 		return v, fmt.Errorf("comment submitted; readback failed: %w (inspect before retrying)", err)
 	}
-	if found := findReply(after, parent, body); found != nil {
+	if found := findComment(after, parent, body, location); found != nil {
 		return map[string]any{"verified": true, "data": found}, nil
 	}
 	return v, fmt.Errorf("comment submitted; readback did not confirm it (inspect before retrying)")
@@ -343,11 +363,27 @@ func (a *app) prCommands() *cobra.Command {
 		root.AddCommand(cmd)
 	}
 	var commentBody, commentFile, parent string
+	var filePath, commitID, fileType string
+	var lineNumber int
 	comment := &cobra.Command{Use: "comment [OCID|URL|branch]", Aliases: []string{"reply"}, Args: cobra.MaximumNArgs(1), Short: "Post an idempotent comment/reply and verify readback"}
 	comment.Flags().StringVarP(&commentBody, "body", "b", "", "Comment text")
 	comment.Flags().StringVarP(&commentFile, "body-file", "F", "", "Text file, or - for stdin")
 	comment.Flags().StringVar(&parent, "parent", "", "Original comment ID for a threaded reply")
+	comment.Flags().StringVar(&filePath, "path", "", "Repository-relative file for an inline comment")
+	comment.Flags().StringVar(&commitID, "commit", "", "Commit SHA for an inline comment")
+	comment.Flags().StringVar(&fileType, "side", "SOURCE", "SOURCE or DESTINATION")
+	comment.Flags().IntVar(&lineNumber, "line", 0, "Positive line number for an inline comment")
 	comment.RunE = func(c *cobra.Command, args []string) error {
+		var location map[string]any
+		if filePath != "" || commitID != "" || lineNumber != 0 || c.Flags().Changed("side") {
+			if parent != "" || filePath == "" || commitID == "" || lineNumber < 1 ||
+				strings.HasPrefix(filePath, "/") || strings.Contains(filePath, "\\") ||
+				strings.Contains("/"+filePath+"/", "/../") || strings.Contains("/"+filePath+"/", "/./") ||
+				(fileType != "SOURCE" && fileType != "DESTINATION") {
+				return fmt.Errorf("inline comments require --path (repository-relative), --commit, --line > 0 and --side SOURCE|DESTINATION; replies use only --parent")
+			}
+			location = map[string]any{"filePath": filePath, "commitId": commitID, "fileType": fileType, "lineNumber": lineNumber}
+		}
 		cfg, e := a.resolve(c)
 		if e != nil {
 			return e
@@ -364,7 +400,7 @@ func (a *app) prCommands() *cobra.Command {
 		if e != nil {
 			return e
 		}
-		v, e := a.reply(c, cfg, str(object(pr), "id"), parent, body)
+		v, e := a.postComment(c, cfg, str(object(pr), "id"), parent, body, location)
 		if e != nil {
 			return e
 		}
