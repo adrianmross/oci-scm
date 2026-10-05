@@ -1,0 +1,8 @@
+/bin/
+/dist/
+/.oci-scm.json
+/handoffs/
+/runs/
+/local-evidence/
+*.bundle
+.DS_Store
