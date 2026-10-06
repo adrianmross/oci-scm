@@ -38,16 +38,17 @@ func execute(ctx context.Context, dir, bin string, args ...string) ([]byte, erro
 
 // Config contains references and identifiers only. OCI CLI owns credentials.
 type Config struct {
-	Schema      string `json:"schema,omitempty"`
-	Repository  string `json:"repository,omitempty"`
-	Remote      string `json:"remote,omitempty"`
-	Profile     string `json:"profile,omitempty"`
-	Region      string `json:"region,omitempty"`
-	Auth        string `json:"auth,omitempty"`
-	ConfigFile  string `json:"configFile,omitempty"`
-	Compartment string `json:"compartment,omitempty"`
-	Project     string `json:"project,omitempty"`
-	Context     string `json:"context,omitempty"`
+	Issues      *IssueConfig `json:"issues,omitempty"`
+	Schema      string       `json:"schema,omitempty"`
+	Repository  string       `json:"repository,omitempty"`
+	Remote      string       `json:"remote,omitempty"`
+	Profile     string       `json:"profile,omitempty"`
+	Region      string       `json:"region,omitempty"`
+	Auth        string       `json:"auth,omitempty"`
+	ConfigFile  string       `json:"configFile,omitempty"`
+	Compartment string       `json:"compartment,omitempty"`
+	Project     string       `json:"project,omitempty"`
+	Context     string       `json:"context,omitempty"`
 }
 
 type app struct {
@@ -85,7 +86,7 @@ func newApp(run runner) *app {
 	f.StringVar(&a.fields, "json", "", "JSON fields (comma-separated), or all")
 	f.BoolVar(&a.apply, "apply", false, "Execute mutations; otherwise print a plan")
 	f.DurationVar(&a.timeout, "timeout", 2*time.Minute, "Timeout per external command")
-	r.AddCommand(a.contextCommand(), a.authCommands(), a.repoCommands(), a.prCommands(), a.runCommands(), a.handoffCommands(), a.apiCommand(), a.workflowCommands(), a.browseCommand(), a.extensionCommands())
+	r.AddCommand(a.contextCommand(), a.authCommands(), a.repoCommands(), a.prCommands(), a.runCommands(), a.handoffCommands(), a.apiCommand(), a.workflowCommands(), a.browseCommand(), a.extensionCommands(), a.issueCommands())
 	r.AddCommand(&cobra.Command{Use: "version", Args: cobra.NoArgs, Short: "Show version", RunE: func(c *cobra.Command, _ []string) error { return a.print(c, map[string]any{"version": version}) }})
 	r.AddCommand(&cobra.Command{Use: "doctor", Args: cobra.NoArgs, Short: "Verify tooling, effective target, and repository access", RunE: a.doctor})
 	return a

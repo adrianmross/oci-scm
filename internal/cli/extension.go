@@ -84,14 +84,16 @@ func extensionPath(root, subdir string) (string, error) {
 }
 
 func inspectExtension(e *extension) error {
-	var manifest struct {
-		Schema string `json:"schema"`
-		Kind   string `json:"kind"`
-	}
+	var manifest issueManifest
 	err := readJSON(filepath.Join(e.Path, "oscm-extension.json"), &manifest)
 	if err == nil {
-		if manifest.Schema != "oci-scm.extension.v1" || manifest.Kind != "neovim" {
+		if manifest.Schema != "oci-scm.extension.v1" || (manifest.Kind != "neovim" && manifest.Kind != "issue-provider") {
 			return fmt.Errorf("unsupported extension manifest")
+		}
+		if manifest.Kind == "issue-provider" {
+			e.Kind = manifest.Kind
+			_, err := issueExecutable(*e)
+			return err
 		}
 		e.Kind = "neovim"
 		info, err := os.Stat(filepath.Join(e.Path, "lua"))
@@ -112,7 +114,7 @@ func inspectExtension(e *extension) error {
 }
 
 func (a *app) extensionCommands() *cobra.Command {
-	r := &cobra.Command{Use: "extension", Aliases: []string{"extensions", "ext"}, Short: "Manage optional command and Neovim extensions (no OCI authentication required)"}
+	r := &cobra.Command{Use: "extension", Aliases: []string{"extensions", "ext"}, Short: "Manage optional command, Neovim and issue-provider extensions (no OCI authentication required)"}
 	var name, subdir, pin string
 	install := &cobra.Command{Use: "install REPOSITORY", Args: cobra.ExactArgs(1), Short: "Install a Git repository or link a local extension (plan unless --apply)"}
 	install.Flags().StringVar(&name, "name", "", "Extension name (default repository name without oscm-)")
@@ -289,7 +291,7 @@ func (a *app) extensionCommands() *cobra.Command {
 			return err
 		}
 		if e.Kind != "command" {
-			return fmt.Errorf("%s is a Neovim plugin; add the extension path to Neovim's runtimepath instead", e.Name)
+			return fmt.Errorf("%s is not a command extension; use its issue commands or Neovim runtime path", e.Name)
 		}
 		if err = inspectExtension(&e); err != nil {
 			return err
