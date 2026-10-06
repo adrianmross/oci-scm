@@ -308,7 +308,7 @@ func items(response map[string]any) []map[string]any {
 	return out
 }
 
-var aliases = map[string]string{"title": "display-name", "body": "description", "state": "lifecycle-details", "headRefName": "source-branch", "baseRefName": "destination-branch", "createdAt": "time-created", "updatedAt": "time-updated"}
+var aliases = map[string]string{"reviewStatus": "review-status", "title": "display-name", "body": "description", "state": "lifecycle-details", "headRefName": "source-branch", "baseRefName": "destination-branch", "createdAt": "time-created", "updatedAt": "time-updated"}
 
 func (a *app) print(c *cobra.Command, value any) error {
 	if a.fields != "" && a.fields != "all" {
