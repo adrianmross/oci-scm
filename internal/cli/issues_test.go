@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -15,10 +16,14 @@ func TestIssueProvidersAreOptionalAndDoNotResolveOCI(t *testing.T) {
 	t.Setenv("OSCM_EXTENSION_DIR", t.TempDir())
 	path := t.TempDir()
 	path, _ = filepath.EvalSymlinks(path)
-	if err := os.WriteFile(filepath.Join(path, "issue-provider"), []byte("#!/bin/sh\nexit 1\n"), 0755); err != nil {
+	executable := "issue-provider"
+	if runtime.GOOS == "windows" {
+		executable += ".exe"
+	}
+	if err := os.WriteFile(filepath.Join(path, executable), []byte("#!/bin/sh\nexit 1\n"), 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := writeJSON(filepath.Join(path, "oscm-extension.json"), issueManifest{Schema: "oci-scm.extension.v1", Kind: "issue-provider", Executable: "issue-provider"}); err != nil {
+	if err := writeJSON(filepath.Join(path, "oscm-extension.json"), issueManifest{Schema: "oci-scm.extension.v1", Kind: "issue-provider", Executable: executable}); err != nil {
 		t.Fatal(err)
 	}
 	f := &fakeOCI{}
@@ -30,7 +35,7 @@ func TestIssueProvidersAreOptionalAndDoNotResolveOCI(t *testing.T) {
 		if bin == "git" {
 			return nil, fmt.Errorf("no repo")
 		}
-		if bin != filepath.Join(path, "issue-provider") {
+		if bin != filepath.Join(path, executable) {
 			t.Fatalf("unexpected authentication/tool call %s", bin)
 		}
 		calls++
