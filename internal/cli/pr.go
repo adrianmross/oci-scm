@@ -194,7 +194,7 @@ func (a *app) prCommands() *cobra.Command {
 		}
 		return a.print(c, items(v))
 	}
-	root.AddCommand(list)
+	root.AddCommand(list, a.prReadyCommand())
 	for _, name := range []string{"view", "status", "comments", "checks", "diff"} {
 		cmd := &cobra.Command{Use: name + " [OCID|URL|branch]", Args: cobra.MaximumNArgs(1), Short: map[string]string{"view": "View a pull request", "status": "View current branch PR status", "comments": "Read all comment threads", "checks": "Read OCI build-run snapshots", "diff": "Read source/base file differences"}[name]}
 		cmd.RunE = func(c *cobra.Command, args []string) error {
@@ -212,6 +212,8 @@ func (a *app) prCommands() *cobra.Command {
 			}
 			pr := object(v)
 			switch name {
+			case "view", "status":
+				v, e = a.rawPR(c, cfg, str(pr, "id"))
 			case "comments":
 				v, e = a.comments(c, cfg, str(pr, "id"))
 			case "checks":
@@ -235,6 +237,7 @@ func (a *app) prCommands() *cobra.Command {
 	for _, name := range []string{"create", "edit"} {
 		var title, body, file, base, head string
 		var reviewers []string
+		var draft bool
 		cmd := &cobra.Command{Use: name + " [OCID|URL|branch]", Args: cobra.MaximumNArgs(1), Short: map[string]string{"create": "Create a PR (plan unless --apply)", "edit": "Edit title/body/reviewers (plan unless --apply)"}[name]}
 		cmd.Flags().StringVarP(&title, "title", "t", "", "Pull request title")
 		cmd.Flags().StringVarP(&body, "body", "b", "", "Description")
@@ -242,6 +245,7 @@ func (a *app) prCommands() *cobra.Command {
 		cmd.Flags().StringVarP(&base, "base", "B", "", "Destination branch")
 		cmd.Flags().StringSliceVarP(&reviewers, "reviewer", "r", nil, "Reviewer principal OCIDs")
 		if name == "create" {
+			cmd.Flags().BoolVarP(&draft, "draft", "d", false, "Create as a draft using the raw OCI API")
 			cmd.Flags().StringVarP(&head, "head", "H", "", "Source branch (default current branch)")
 		}
 		cmd.RunE = func(c *cobra.Command, args []string) error {
@@ -296,6 +300,16 @@ func (a *app) prCommands() *cobra.Command {
 				}
 				for _, pr := range items(found) {
 					if base == "" || str(pr, "destination-branch") == base {
+						if draft {
+							existing, err := a.rawPR(c, cfg, str(pr, "id"))
+							if err != nil {
+								return err
+							}
+							pr = object(existing)
+							if str(pr, "review-status") != "DRAFT" {
+								return fmt.Errorf("matching PR already exists and is not a draft; use pr ready --undo explicitly")
+							}
+						}
 						return a.print(c, map[string]any{"alreadyExists": true, "data": pr})
 					}
 				}
@@ -317,7 +331,13 @@ func (a *app) prCommands() *cobra.Command {
 				}
 				path = []string{"devops", "pull-request", "update", "--force"}
 			}
-			v, e := a.mutate(c, cfg, path, input)
+			var v map[string]any
+			if name == "create" && draft {
+				input["reviewStatus"] = "DRAFT"
+				v, e = a.rawPRRequest(c, cfg, "POST", "/20210630/pullRequests", input, "")
+			} else {
+				v, e = a.mutate(c, cfg, path, input)
+			}
 			if e != nil {
 				return e
 			}
@@ -340,8 +360,14 @@ func (a *app) prCommands() *cobra.Command {
 					id = str(matches[0], "id")
 				}
 				v, e = a.getPR(c, cfg, id)
+				if e == nil && draft {
+					v, e = a.rawPR(c, cfg, id)
+				}
 				if e != nil {
 					return fmt.Errorf("create submitted; readback failed: %w", e)
+				}
+				if draft && str(object(v), "review-status") != "DRAFT" {
+					return fmt.Errorf("create submitted; draft status not confirmed (inspect before retrying)")
 				}
 				if pr := object(v); str(pr, "source-branch") != head || str(pr, "display-name") != title || (base != "" && str(pr, "destination-branch") != base) {
 					return fmt.Errorf("create submitted; readback differs")

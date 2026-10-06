@@ -92,6 +92,9 @@ func (f *fakeOCI) run(_ context.Context, _ string, bin string, args ...string) (
 	}
 	f.calls = append(f.calls, append([]string{}, args...))
 	joined := strings.Join(args, " ")
+	if strings.Contains(joined, "raw-request") && strings.Contains(joined, "--http-method GET") {
+		return jsonBytes(map[string]any{"status": "200 OK", "headers": map[string]any{"ETag": "etag-1"}, "data": map[string]any{"id": "ocid1.devopspullrequest.test", "repositoryId": "ocid1.devopsrepository.test", "sourceBranch": "feature", "destinationBranch": "main", "displayName": "Example", "reviewStatus": "READY", "lifecycleDetails": "OPEN"}}), nil
+	}
 	if strings.Contains(joined, "pull-request get") {
 		return jsonBytes(map[string]any{"etag": "etag-1", "data": map[string]any{"id": "ocid1.devopspullrequest.test", "repository-id": "ocid1.devopsrepository.test", "source-branch": "feature", "destination-branch": "main", "display-name": "Example", "description": "Original", "lifecycle-details": "OPEN"}}), nil
 	}

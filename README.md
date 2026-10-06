@@ -244,3 +244,18 @@ make build
 
 Tests use fake OCI responses and temporary real Git repositories. They do not
 need credentials or mutate a cloud resource. See [contributing](CONTRIBUTING.md).
+
+### Draft pull requests
+
+```sh
+oscm pr create --draft --title "Work in progress" --head feature --base main
+oscm pr create --draft --title "Work in progress" --head feature --base main --apply
+oscm pr view feature --json title,reviewStatus,isDraft
+oscm pr ready feature                 # preview the transition
+oscm pr ready feature --apply         # mark ready for review
+oscm pr ready feature --undo --apply  # convert back to draft
+```
+
+OCI SCM returns native `reviewStatus` values `DRAFT` and `READY` that older OCI CLI SDK models omit. Draft creation, status reads, and readiness updates use signed `oci raw-request` calls against the regional DevOps API. Updates require an ETag and verify the requested status by reading it back; a submitted or ignored update is never reported as verified. Already matching states produce no write. Draft creation never silently converts an existing ready PR.
+
+Full PR view/status JSON retains the CLI's existing kebab-case fields and adds `review-status` and the gh-style `isDraft` boolean. `--json reviewStatus` selects the native status. Unknown status values are preserved without inventing a draft boolean. Draft status alone does not guarantee notification or build suppression.
