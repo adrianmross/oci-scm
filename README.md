@@ -259,3 +259,35 @@ oscm pr ready feature --undo --apply  # convert back to draft
 OCI SCM returns native `reviewStatus` values `DRAFT` and `READY` that older OCI CLI SDK models omit. Draft creation, status reads, and readiness updates use signed `oci raw-request` calls against the regional DevOps API. Updates require an ETag and verify the requested status by reading it back; a submitted or ignored update is never reported as verified. Already matching states produce no write. Draft creation never silently converts an existing ready PR.
 
 Full PR view/status JSON retains the CLI's existing kebab-case fields and adds `review-status` and the gh-style `isDraft` boolean. `--json reviewStatus` selects the native status. Unknown status values are preserved without inventing a draft boolean. Draft status alone does not guarantee notification or build suppression.
+### Optional issue providers
+
+The base CLI includes only an issue-provider loader and a JSON contract. Tracker adapters are separate extensions; installing one does not authenticate, fetch issues, or activate it for a project.
+
+```sh
+oscm extension install adrianmross/issue-providers --name jira --subdir packages/jira --apply
+oscm extension install adrianmross/issue-providers --name github --subdir packages/github --apply
+oscm extension install adrianmross/issue-providers --name linear --subdir packages/linear --apply
+```
+
+Select the provider in the owning repository's `.oci-scm.json`:
+
+```json
+{
+  "schema": "oci-scm.repo.v1",
+  "issues": { "provider": "jira", "options": { "target": "jira-oci" } }
+}
+```
+
+Keep existing SCM settings when adding `issues`. GitHub uses `options.repo` (`OWNER/REPO`); Linear optionally uses `options.team`. The providers package documents dependencies and environment-based authentication. Do not put credentials in repository settings.
+
+```sh
+oscm issue view EX-123
+oscm issue view EX-123 --offline
+oscm issue view EX-123 --refresh
+oscm issue search 'project = EX AND status = Open'
+oscm issue view EX-123 --json key,title,status
+```
+
+Issue commands never resolve OCI authentication. `--provider` overrides the selected extension and clears options from a different provider. Responses expose `cache.source`, `cache.fetchedAt` (Unix seconds), and `cache.stale`. Search semantics belong to each adapter: Jira JQL, GitHub search, and Linear title text. Read-only providers cannot implicitly transition or create issues.
+
+The extension manifest uses `schema: oci-scm.extension.v1`, `kind: issue-provider`, and an executable relative path in `executable`. Its executable receives `--request JSON` with schema `issue-provider.request.v1`, operation `get` or `search`, `key` or `query`, provider `options`, and `offline`/`refresh` flags. It returns one JSON object with schema `issue-provider.response.v1`, an `issue` or `items`, and optional cache metadata. Canonical issue fields are `id`, `key`, `title`, `body`, `url`, `status`, `assignee`, `labels`, and `updatedAt`. Plugin code executes only after an explicit issue command.
